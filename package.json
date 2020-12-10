@@ -1,0 +1,47 @@
+{
+  "version": "0.0.1",
+  "name": "watches",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marshallcb/jeye.git"
+  },
+  "description": "Watch ES6 modules and their dependencies for changes",
+  "module": "dist/index.mjs",
+  "main": "dist/index.js",
+  "license": "MIT",
+  "author": {
+    "name": "Marshall Brandt",
+    "email": "hey@m4r.sh",
+    "url": "https://m4r.sh"
+  },
+  "files": [
+    "dist",
+    "types"
+  ],
+  "types": "types/index.d.ts",
+  "engines": {
+    "node": ">= 10"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "test": "node -r esm test/outputs",
+    "dev": "npm run build && npm run test"
+  },
+  "keywords": [
+    "watch",
+    "watches",
+    "es6",
+    "javascript",
+    "dependencies"
+  ],
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "8.1.0",
+    "esm": "^3.2.25",
+    "rollup": "2.21.0",
+    "es-module-lexer": "^0.3.26",
+    "totalist": "^2.0.0"
+  },
+  "dependencies": {
+    "chokidar": "^3.4.3"
+  }
+}
