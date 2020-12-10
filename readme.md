@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/marshallcb/watches/raw/main/docs/watches.png" alt="watches" width="75" />
+  <img src="https://github.com/marshallcb/watches/raw/main/meta/watches.png" alt="watches" width="75" />
 </div>
 
 <h1 align="center">watch<b>es</b></h1>
