@@ -112,7 +112,7 @@ class Watches{
 
   async init(){
     await init;
-    this.targets = await targets(this.sources, this.options)
+    this.targets = await scan(this.sources, this.options)
     await Promise.all(Object.keys(this.targets).map(this.updateDependents))
   }
 
