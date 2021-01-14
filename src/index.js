@@ -47,7 +47,7 @@ async function file_info(p, sources){
 }
 
 class Watches{
-  constructor(sources, options={}){
+  constructor(sources, require_cache = require.cache, options={}){
     Object.assign(this, {
       sources: (Array.isArray(sources) ? sources : [sources]).map(path.normalize),
       options,
@@ -55,7 +55,7 @@ class Watches{
       dependents: {},
       subscribers: {}
     })
-    this.cache = options.cache || require.cache
+    this.cache = require_cache
     this.updateDependents = this.updateDependents.bind(this)
     this.effects = this.effects.bind(this)
     this.changeFile = this.changeFile.bind(this)
