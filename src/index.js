@@ -195,11 +195,11 @@ class Watches{
   
 }
 
-export function watch(source, options){
+export function watches(source, options){
   return new Watches(source, options);
 }
 
-export async function targets(sources=[], options={}){
+export async function scan(sources=[], options={}){
   let targets = {}
   let paths = []
   sources = (Array.isArray(sources) ? sources : [sources]).map(path.normalize)
