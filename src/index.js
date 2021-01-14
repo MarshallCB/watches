@@ -23,8 +23,9 @@ async function file_info(p, sources){
   try{
     await init;
     let module
+    let abs_path = path.join(process.cwd(),p)
     try{
-      module = require(p)
+      module = require(abs_path)
     } catch(e){
       console.log("watches: error with module " + p)
       console.log(e)
@@ -37,7 +38,6 @@ async function file_info(p, sources){
       // it found the correct source when id != p
       return id !== p;
     });
-    let abs_path = path.join(process.cwd(),p)
     let [imports, exports] = js ? parse(contents.toString('utf8')) : [null,null]
     return { imports, exports, contents, js, id, module, p, abs_path }
   } catch(e){
