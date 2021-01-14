@@ -63,7 +63,6 @@ class Watches{
     this.changeFile = this.changeFile.bind(this)
     this.init = this.init.bind(this)
     this.removeFile = this.removeFile.bind(this)
-    console.log(this.options.ignore)
 
     this.watcher = chokidar.watch(this.sources, {
       ...options.chokidar,
