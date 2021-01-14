@@ -118,13 +118,18 @@ class Watches{
     await Promise.all(Object.keys(this.targets).map(this.updateDependents))
   }
 
+  clearCache(p){
+    delete this.cache[path.join(process.cwd(), p)]
+    delete require.cache[path.join(process.cwd(), p)]
+  }
+
 
   async effects(p,changed=new Set()){
     // if in source directory and isn't hidden
     if(this.isTarget(p)){
       changed.add(p)
     }
-    delete this.cache[path.join(process.cwd(), p)]
+    this.clearCache(p)
     if(this.dependents[p]){
       let effect = async function(dep){
         await this.effects(dep,changed)
@@ -139,7 +144,7 @@ class Watches{
   }
 
   async updateDependents(p){
-    delete this.cache[path.join(process.cwd(), p)]
+    this.clearCache(p)
     let info = await file_info(p, this.sources)
     if(this.isTarget(p)){
       this.targets[p] = info
