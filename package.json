@@ -3,7 +3,7 @@
   "name": "watches",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/marshallcb/jeye.git"
+    "url": "git+https://github.com/marshallcb/watches.git"
   },
   "description": "Watch ES6 modules and their dependencies for changes",
   "module": "dist/index.mjs",
@@ -36,9 +36,9 @@
   ],
   "devDependencies": {
     "@rollup/plugin-node-resolve": "8.1.0",
+    "es-module-lexer": "^0.3.26",
     "esm": "^3.2.25",
     "rollup": "2.21.0",
-    "es-module-lexer": "^0.3.26",
     "totalist": "^2.0.0"
   },
   "dependencies": {

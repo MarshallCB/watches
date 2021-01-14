@@ -4,6 +4,8 @@ import { promisify } from 'util'
 import { init, parse } from 'es-module-lexer/dist/lexer.js';
 import path from 'path'
 import {totalist} from 'totalist/sync'
+require = require("esm")(module)
+
 
 const readFile = promisify(fs.readFile)
 
@@ -20,6 +22,13 @@ function isHidden(p, ignore, only){
 async function file_info(p, sources){
   try{
     await init;
+    let module
+    try{
+      module = require(p)
+    } catch(e){
+      console.log("watches: error with module " + p)
+      console.log(e)
+    }
     let js = (path.extname(p) === '.js')
     let contents = await readFile(p)
     let id=p
@@ -28,14 +37,16 @@ async function file_info(p, sources){
       // it found the correct source when id != p
       return id !== p;
     });
+    let abs_path = path.join(process.cwd(),p)
     let [imports, exports] = js ? parse(contents.toString('utf8')) : [null,null]
-    return { imports, exports, contents, js, id }
+    return { imports, exports, contents, js, id, module, p, abs_path }
   } catch(e){
     console.log("Error parsing " + p)
+    console.log(e)
   }
 }
 
-class Jeye{
+class Watches{
   constructor(sources, options={}){
     Object.assign(this, {
       sources: (Array.isArray(sources) ? sources : [sources]).map(path.normalize),
@@ -63,7 +74,7 @@ class Jeye{
     this.init().then(() => {
       this.dispatch('ready', this.targets)
     }).catch(e => {
-      this.dispatch('error', "Error initializing jeye")
+      this.dispatch('error', "Error initializing watches")
       console.log(e)
     })
   }
@@ -72,8 +83,8 @@ class Jeye{
     await this.updateDependents(p)
     let changed = await this.effects(p)
     await Promise.all(
-      changed.map(async change => {
-        await this.dispatch('change', change, this.targets[change])
+      changed.map(async p => {
+        await this.dispatch('change', this.targets[p])
       })
     )
     this.dispatch('aggregate', this.targets, changed)
@@ -185,7 +196,7 @@ class Jeye{
 }
 
 export function watch(source, options){
-  return new Jeye(source, options);
+  return new Watches(source, options);
 }
 
 export async function targets(sources=[], options={}){
