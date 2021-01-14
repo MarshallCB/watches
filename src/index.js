@@ -24,13 +24,15 @@ async function file_info(p, sources){
     await init;
     let module
     let abs_path = path.join(process.cwd(),p)
-    try{
-      module = require(abs_path)
-    } catch(e){
-      console.log("watches: error with module " + p)
-      console.log(e)
-    }
     let js = (path.extname(p) === '.js')
+    if(js){
+      try{
+        module = require(abs_path)
+      } catch(e){
+        console.log("watches: error with module " + p)
+        console.log(e)
+      }
+    }
     let contents = await readFile(p)
     let id=p
     sources.find(s => {
@@ -61,6 +63,7 @@ class Watches{
     this.changeFile = this.changeFile.bind(this)
     this.init = this.init.bind(this)
     this.removeFile = this.removeFile.bind(this)
+    console.log(this.options.ignore)
 
     this.watcher = chokidar.watch(this.sources, {
       ...options.chokidar,
@@ -195,8 +198,8 @@ class Watches{
   
 }
 
-export function watches(source, options){
-  return new Watches(source, options);
+export function watches(source, cache, options){
+  return new Watches(source, cache, options);
 }
 
 export async function scan(sources=[], options={}){
