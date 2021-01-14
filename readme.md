@@ -2,7 +2,7 @@
   <img src="https://github.com/marshallcb/watches/raw/main/meta/watches.png" alt="watches" width="75" />
 </div>
 
-<h1 align="center">watch<b>es</b></h1>
+<h1 align="center">watches</h1>
 <h3 align="center">Watch ES6 modules and their dependencies for changes</h3>
 
 <div align="center">
