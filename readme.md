@@ -14,7 +14,40 @@
   </a>
 </div>
 
-# Coming Soon
+# API
+
+### `watch(source, options)`
+
+```js
+watch(['src','static'], {
+  cache: require.cache, // to automatically clear require.cache on changes
+  ignore: /(^|[\/\\])[\._]./, //ignore files/folders with . or _ prefix
+  only: /\.js$/ // only files with a .js extension
+}).on('ready', (all) => {
+  console.log("READY")
+  console.log(all)
+}).on('change', (changed, all) => {
+  console.log("CHANGE")
+  console.log(changed)
+  console.log(changed.length + ' targets affected')
+}).on('remove', (removed) => {
+  console.log("REMOVE")
+  console.log(removed)
+}).on('error', (e) => {
+  console.log("ERROR")
+  console.log(e)
+})
+```
+
+### `scan(source, options)`
+
+```js
+let files = scan(['src','static'], {
+  ignore: /(^|[\/\\])[\._]./, //ignore files/folders with . or _ prefix
+  only: /\.js$/ // only files with a .js extension
+})
+console.log(files) // all matching files
+```
 
 ## License
 

@@ -18,51 +18,32 @@ function isHidden(p, ignore, only){
   return !shouldInclude || shouldIgnore
 }
 
+const cwdify = (p) => path.join(process.cwd(),p.replace(process.cwd(), ''))
+
 // TODO: handler errors such that it waits until error is resolved before continuing
-async function file_info(p, sources){
-  try{
-    await init;
-    let module
-    let abs_path = path.join(process.cwd(),p)
-    let js = (path.extname(p) === '.js')
-    if(js){
-      try{
-        module = require(abs_path)
-      } catch(e){
-        console.log("watches: error with module " + p)
-        console.log(e)
-      }
-    }
-    let contents = await readFile(p)
-    let id=p
-    sources.find(s => {
-      id = p.startsWith(s) ? p.replace(s,"") : p
-      // it found the correct source when id != p
-      return id !== p;
-    });
-    let [imports, exports] = js ? parse(contents.toString('utf8')) : [null,null]
-    return { imports, exports, contents, js, id, module, p, abs_path }
-  } catch(e){
-    console.log("Error parsing " + p)
-    console.log(e)
-  }
+async function file_info(p){
+  await init;
+  let js = (path.extname(p) === '.js')
+  let contents = await readFile(p, 'utf8')
+  let [imports, exports] = js ? parse(contents) : [null,null]
+  return { imports, exports, contents, js, p}
 }
 
-class Watches{
-  constructor(sources, require_cache = require.cache, options={}){
+class Watcher{
+  constructor(sources, options={}){
     Object.assign(this, {
-      sources: (Array.isArray(sources) ? sources : [sources]).map(path.normalize),
+      sources: (Array.isArray(sources) ? sources : [sources]).map(s => cwdify(path.normalize(s))),
       options,
       targets: {},
       dependents: {},
       subscribers: {}
     })
-    this.cache = require_cache
+    this.cache = options.cache
     this.updateDependents = this.updateDependents.bind(this)
     this.effects = this.effects.bind(this)
     this.changeFile = this.changeFile.bind(this)
     this.init = this.init.bind(this)
-    this.removeFile = this.removeFile.bind(this)
+    this.remove = this.remove.bind(this)
 
     this.watcher = chokidar.watch(this.sources, {
       ...options.chokidar,
@@ -70,11 +51,11 @@ class Watches{
     })
     .on('add', this.changeFile)
     .on('change', this.changeFile)
-    .on('unlink', this.removeFile)
-    .on('unlinkDir', this.removeFile)
+    .on('unlink', this.remove)
+    .on('unlinkDir', this.remove)
 
     this.init().then(() => {
-      this.dispatch('ready', this.targets)
+      this.dispatch('ready', Object.keys(this.targets))
     }).catch(e => {
       this.dispatch('error', "Error initializing watches")
       console.log(e)
@@ -82,45 +63,54 @@ class Watches{
   }
 
   async changeFile(p){
-    await this.updateDependents(p)
-    let changed = await this.effects(p)
-    await Promise.all(
-      changed.map(async p => {
-        await this.dispatch('change', this.targets[p])
-      })
-    )
-    this.dispatch('aggregate', this.targets, changed)
+    try{
+      p = cwdify(p)
+      await this.updateDependents(p)
+      let changed = await this.effects(p)
+      if(changed.length > 0){
+        this.dispatch('change', changed, Object.keys(this.targets))
+      }
+    } catch(e){
+      this.dispatch('error', e)
+    }
   }
 
-  async removeFile(p){
-    let changed = [];
-    Object.keys(this.dependents).forEach(k => {
-      this.dependents[k].forEach(dep => {
-        if(dep.startsWith(p)){
-          this.dependents[k].delete(dep)
-          changed.push(dep)
+  async remove(p){
+    try {
+      p = cwdify(p)
+      let removed = [];
+      Object.keys(this.dependents).forEach(k => {
+        this.dependents[k].forEach(dep => {
+          if(dep.startsWith(p)){
+            this.dependents[k].delete(dep)
+            removed.push(dep)
+          }
+        })
+        if(this.dependents[k].size === 0 || k.startsWith(p)){
+          delete this.dependents[k]
         }
       })
-      if(this.dependents[k].size === 0 || k.startsWith(p)){
-        delete this.dependents[k]
-      }
-    })
-    this.dispatch('remove', p, changed)
+      this.dispatch('remove', removed)
+    } catch(e){
+      this.dispatch('error', e)
+    }
   }
 
   isTarget(p){
-    return this.sources.some(s => p.includes(s)) && !isHidden(p, this.options.ignore, this.options.only)
+    return this.sources.some(s => p.startsWith(s)) && !isHidden(p, this.options.ignore, this.options.only)
   }
 
   async init(){
     await init;
-    this.targets = await scan(this.sources, this.options)
-    await Promise.all(Object.keys(this.targets).map(this.updateDependents))
+    let target_paths = scan(this.sources, this.options)
+    await Promise.all(
+      target_paths.map(this.updateDependents)
+    )
   }
 
   clearCache(p){
-    delete this.cache[path.join(process.cwd(), p)]
-    delete require.cache[path.join(process.cwd(), p)]
+    delete this.cache[p]
+    delete require.cache[p]
   }
 
 
@@ -145,22 +135,25 @@ class Watches{
 
   async updateDependents(p){
     this.clearCache(p)
-    let info = await file_info(p, this.sources)
+    let info = await file_info(p)
     if(this.isTarget(p)){
       this.targets[p] = info
       this.watcher.add(p)
     }
-    let updateDependents = this.updateDependents
     if(info.js){
-      let promises = info.imports.map(async function({ s, e }){
-        let import_str = info.contents.toString('utf8').substring(s,e)
-        // only look for local imports (like './file.js' or '../file.js', not 'external-module')
-        if(import_str.startsWith('.')){
-          // ensure .js extension if not included in import statement
-          import_str = import_str.endsWith('.js') ? import_str : import_str + '.js'
-          // convert the import path to be relative to the cwd
-          let import_path = path.join(p, '../', import_str)
-          
+      let promises = []
+      let relevant_imports = info.imports
+        // get import string
+        .map(({s,e}) => info.contents.substring(s,e))
+        // only include local imports
+        .filter(str => str.startsWith('.'))
+        // ensure import string includes .js extension
+        .map(str => str.endsWith('.js') ? str : str + '.js') 
+        // resolve import path
+        .map(str => path.join(path.dirname(p), str))
+
+      await Promise.all(
+        relevant_imports.map(async import_path => {
           // if we haven't already tracked this file
           if(!this.dependents[import_path]){
             this.dependents[import_path] = new Set([p])
@@ -173,22 +166,18 @@ class Watches{
             // ensure this path is included in dependency's dependents
             this.dependents[import_path].add(p)
           }
-        }
-      }.bind(this))
-      await Promise.all(promises)
+        })
+      )
     }
+    
   }
 
   async dispatch(event, ...args){
     if(this.subscribers[event]){
       let promises = []
-      this.subscribers[event].forEach(callback => {
-        // if callback is async, it will return a promise
-        promises.push(callback.apply(null,args))
-      })
+      this.subscribers[event].forEach(cb => promises.push(cb(...args)))
       await Promise.all(promises)
     }
-    
   }
 
   on(event, callback){
@@ -202,27 +191,22 @@ class Watches{
   
 }
 
-export function watches(source, cache, options){
-  return new Watches(source, cache, options);
+export function watch(source, cache, options){
+  return new Watcher(source, cache, options);
 }
 
-export async function scan(sources=[], options={}){
-  let targets = {}
-  let paths = []
+export function scan(sources=[], options={}){
+  let targets = []
   sources = (Array.isArray(sources) ? sources : [sources]).map(path.normalize)
 
-  sources.map(src => {
+  sources.forEach(src => {
     totalist(src,  (rel) => {
-      paths.push(path.join(src, rel))
+      let p = path.join(src,rel)
+      if(!isHidden(p, options.ignore, options.only)){
+        targets.push(p)
+      }
     })
   })
-
-  // for each path, await the file_info and fill targets
-  await Promise.all(paths.map(async p => {
-    if(!isHidden(p, options.ignore, options.only)){
-      targets[p] = await file_info(p, sources)
-    }
-  }))
   
   return targets
 }

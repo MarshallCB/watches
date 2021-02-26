@@ -1,24 +1,13 @@
-var { watch } = require('../dist/index')
+var { watch, scan } = require('../dist/index')
 
 watch('test/routes', {
+  cache: require.cache,
   ignore: /(^|[\/\\])[\._]./
-}).on('change', (path, { exports, imports, code }) => {
+}).on('change', (changed, total) => {
   console.log("CHANGE")
-  console.log(path, exports)
-}).on('aggregate', (total, changed) => {
-  console.log("AGGREGATE")
-  console.log(changed + " changed")
+  console.log(changed)
+  console.log(changed.length)
 }).on('ready', (total) => {
   console.log("READY")
   console.log(total)
 })
-
-/**
- * 
- * ___  
- * '┘'  jeye
- * 
- * https://github.com/sindresorhus/cli-spinners/blob/master/spinners.json
- * 
- * ◤⋰◢  ◤⟋◢ 
- */
