@@ -214,7 +214,7 @@ export function scan(sources=[], options={}){
 
   sources.forEach(src => {
     totalist(src,  (rel) => {
-      let p = path.join(src,rel)
+      let p = cwdify(path.join(src,rel))
       if(!isHidden(p, options.ignore, options.only)){
         targets.push({
           contents: fs.readFileSync(p,'utf8'),
