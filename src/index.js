@@ -24,9 +24,10 @@ const cwdify = (p) => path.join(process.cwd(),p.replace(process.cwd(), ''))
 async function file_info(p){
   await init;
   let js = (path.extname(p) === '.js')
+  let module = js ? require(p) : void 0
   let contents = await readFile(p, 'utf8')
   let [imports, exports] = js ? parse(contents) : [null,null]
-  return { imports, exports, contents, js, p}
+  return { imports, exports, contents, js, p, module }
 }
 
 class Watcher{
@@ -44,6 +45,7 @@ class Watcher{
     this.changeFile = this.changeFile.bind(this)
     this.init = this.init.bind(this)
     this.remove = this.remove.bind(this)
+    this.format = this.format.bind(this)
 
     this.watcher = chokidar.watch(this.sources, {
       ...options.chokidar,
@@ -55,10 +57,21 @@ class Watcher{
     .on('unlinkDir', this.remove)
 
     this.init().then(() => {
-      this.dispatch('ready', Object.keys(this.targets))
+      this.dispatch('ready', this.format(Object.keys(this.targets)))
     }).catch(e => {
       this.dispatch('error', "Error initializing watches")
       console.log(e)
+    })
+  }
+
+  format(arr=[]){
+    return arr.map(p => {
+      let info = this.targets[p]
+      return {
+        contents: info.contents,
+        module: info.module,
+        p
+      }
     })
   }
 
@@ -68,7 +81,7 @@ class Watcher{
       await this.updateDependents(p)
       let changed = await this.effects(p)
       if(changed.length > 0){
-        this.dispatch('change', changed, Object.keys(this.targets))
+        this.dispatch('change', this.format(changed), this.format(Object.keys(this.targets)))
       }
     } catch(e){
       this.dispatch('error', e)
@@ -102,9 +115,9 @@ class Watcher{
 
   async init(){
     await init;
-    let target_paths = scan(this.sources, this.options)
+    let targets = scan(this.sources, this.options)
     await Promise.all(
-      target_paths.map(this.updateDependents)
+      targets.map(({p}) => this.updateDependents(p))
     )
   }
 
@@ -203,7 +216,11 @@ export function scan(sources=[], options={}){
     totalist(src,  (rel) => {
       let p = path.join(src,rel)
       if(!isHidden(p, options.ignore, options.only)){
-        targets.push(p)
+        targets.push({
+          contents: fs.readFileSync(p,'utf8'),
+          module: require(p),
+          p
+        })
       }
     })
   })
