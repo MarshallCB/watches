@@ -20,7 +20,6 @@ function isHidden(p, ignore, only){
 
 const cwdify = (p) => path.join(process.cwd(),p.replace(process.cwd(), ''))
 
-// TODO: handler errors such that it waits until error is resolved before continuing
 async function file_info(p){
   await init;
   let js = (path.extname(p) === '.js')
