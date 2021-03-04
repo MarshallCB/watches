@@ -4,6 +4,7 @@ import { promisify } from 'util'
 import { init, parse } from 'es-module-lexer/dist/lexer.js';
 import path from 'path'
 import {totalist} from 'totalist/sync'
+import { cwd } from 'process';
 require = require("esm")(module)
 
 
@@ -212,16 +213,25 @@ export function scan(sources=[], options={}){
   sources = (Array.isArray(sources) ? sources : [sources]).map(path.normalize)
 
   sources.forEach(src => {
-    totalist(src,  (rel) => {
-      let p = cwdify(path.join(src,rel))
-      if(!isHidden(p, options.ignore, options.only)){
-        targets.push({
-          contents: fs.readFileSync(p,'utf8'),
-          module: require(p),
-          p
-        })
-      }
-    })
+    if(fs.lstatSync(src).isDirectory()){
+      totalist(src,  (rel) => {
+        let p = cwdify(path.join(src,rel))
+        if(!isHidden(p, options.ignore, options.only)){
+          targets.push({
+            contents: fs.readFileSync(p,'utf8'),
+            module: require(p),
+            p
+          })
+        }
+      })
+    } else {
+      let p = cwdify(src)
+      targets.push({
+        contents: fs.readFileSync(p,'utf8'),
+        module: require(p),
+        p
+      })
+    }
   })
   
   return targets
