@@ -122,7 +122,9 @@ class Watcher{
   }
 
   clearCache(p){
-    delete this.cache[p]
+    if(this.cache){
+      delete this.cache[p]
+    }
     delete require.cache[p]
   }
 
