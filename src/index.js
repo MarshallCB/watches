@@ -114,7 +114,7 @@ class Watcher{
 
   async init(){
     await init;
-    let targets = scan(this.sources, this.options)
+    let targets = await scan(this.sources, this.options)
     await Promise.all(
       targets.map(({p}) => this.updateDependents(p))
     )
@@ -209,7 +209,7 @@ export function watch(source, cache, options){
   return new Watcher(source, cache, options);
 }
 
-export function scan(sources=[], options={}){
+export async function scan(sources=[], options={}){
   let targets = []
   sources = (Array.isArray(sources) ? sources : [sources]).map(path.normalize)
 
@@ -218,22 +218,14 @@ export function scan(sources=[], options={}){
       totalist(src,  (rel) => {
         let p = cwdify(path.join(src,rel))
         if(!isHidden(p, options.ignore, options.only)){
-          targets.push({
-            contents: fs.readFileSync(p),
-            module: require(p),
-            p
-          })
+          targets.push(file_info(p))
         }
       })
     } else {
       let p = cwdify(src)
-      targets.push({
-        contents: fs.readFileSync(p),
-        module: require(p),
-        p
-      })
+      targets.push(file_info(p))
     }
   })
   
-  return targets
+  return await Promise.all(targets)
 }
