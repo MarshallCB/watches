@@ -4,7 +4,6 @@ import { promisify } from 'util'
 import { init, parse } from 'es-module-lexer/dist/lexer.js';
 import path from 'path'
 import {totalist} from 'totalist/sync'
-import { cwd } from 'process';
 require = require("esm")(module)
 
 
@@ -25,8 +24,8 @@ async function file_info(p){
   await init;
   let js = (path.extname(p) === '.js')
   let module = js ? require(p) : void 0
-  let contents = await readFile(p, 'utf8')
-  let [imports, exports] = js ? parse(contents) : [null,null]
+  let contents = await readFile(p)
+  let [imports, exports] = js ? parse(contents.toString('utf8')) : [null,null]
   return { imports, exports, contents, js, p, module }
 }
 
@@ -159,7 +158,7 @@ class Watcher{
       let promises = []
       let relevant_imports = info.imports
         // get import string
-        .map(({s,e}) => info.contents.substring(s,e))
+        .map(({s,e}) => info.contents.toString('utf8').substring(s,e))
         // only include local imports
         .filter(str => str.startsWith('.'))
         // ensure import string includes .js extension
@@ -220,7 +219,7 @@ export function scan(sources=[], options={}){
         let p = cwdify(path.join(src,rel))
         if(!isHidden(p, options.ignore, options.only)){
           targets.push({
-            contents: fs.readFileSync(p,'utf8'),
+            contents: fs.readFileSync(p),
             module: require(p),
             p
           })
@@ -229,7 +228,7 @@ export function scan(sources=[], options={}){
     } else {
       let p = cwdify(src)
       targets.push({
-        contents: fs.readFileSync(p,'utf8'),
+        contents: fs.readFileSync(p),
         module: require(p),
         p
       })
