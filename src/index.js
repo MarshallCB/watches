@@ -229,7 +229,7 @@ export async function scan(sources=[], options={}){
   let arr = await Promise.all(targets)
 
   return arr.map(({js, contents, p}) => ({
-    contents,
+    contents, 
     module: js ? require(p) : void 0,
     p
   }))
