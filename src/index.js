@@ -225,6 +225,12 @@ export async function scan(sources=[], options={}){
       targets.push(file_info(p))
     }
   })
-  
-  return await Promise.all(targets)
+
+  let arr = await Promise.all(targets)
+
+  return arr.map(({js, contents, p}) => ({
+    contents,
+    module: js ? require(p) : void 0,
+    p
+  }))
 }
