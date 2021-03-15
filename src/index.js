@@ -23,10 +23,9 @@ const cwdify = (p) => path.join(process.cwd(),p.replace(process.cwd(), ''))
 async function file_info(p){
   await init;
   let js = (path.extname(p) === '.js')
-  let module = js ? require(p) : void 0
   let contents = await readFile(p)
   let [imports, exports] = js ? parse(contents.toString('utf8')) : [null,null]
-  return { imports, exports, contents, js, p, module }
+  return { imports, exports, contents, js, p }
 }
 
 class Watcher{
@@ -68,7 +67,7 @@ class Watcher{
       let info = this.targets[p]
       return {
         contents: info.contents,
-        module: info.module,
+        module: info.js ? require(p) : void 0,
         p
       }
     })
