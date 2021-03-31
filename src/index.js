@@ -160,8 +160,8 @@ class Watcher{
         .map(({s,e}) => info.contents.toString('utf8').substring(s,e))
         // only include local imports
         .filter(str => str.startsWith('.'))
-        // ensure import string includes .js extension
-        .map(str => str.endsWith('.js') ? str : str + '.js') 
+        // ensure import string includes .js extension (unless it's .json)
+        .map(str => str.endsWith('.js') || str.endsWith('.json') ? str : str + '.js') 
         // resolve import path
         .map(str => path.join(path.dirname(p), str))
 
